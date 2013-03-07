@@ -158,9 +158,8 @@ class Minesweeper(object):
         if value is 0:
             self.guess_surrounding(r,c)
 
-        #self.print_board()
-
     def guess_surrounding(self, r, c):
+        self._validate(r, c)
         if type(self.viewable_board[r][c]) is not int:
             print ('You may only use the global-guessing function on boxes you '
                    'have unconvered')
