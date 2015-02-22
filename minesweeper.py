@@ -17,10 +17,14 @@ class COLOR:
     BACK_RED = '\033[41m'
     BACK_YELLOW = '\033[43m'
     BACK_BLUE = '\033[44m'
+    BACK_PURPLE = '\033[45m'
 
 BLOCK = u"\u2588"
 FLAG = u"\u2690"
 INCORRECT_FLAG = 'i'
+
+CURSOR = u"\u2592"
+CURSOR_FLAG = 'CURSOR_FLAG'
 
 COLOR_DICT = {
     0: " ", #COLOR.WHITE + '0' + COLOR.END,
@@ -37,14 +41,20 @@ COLOR_DICT = {
     #FLAG: COLOR.YELLOW + FLAG + COLOR.END,
     'x': COLOR.BLACK + COLOR.BACK_RED + 'x' + COLOR.END,
     'i': COLOR.BLACK + COLOR.BACK_BLUE + FLAG + COLOR.END,
+    CURSOR: COLOR.PURPLE + CURSOR + COLOR.END,
+    CURSOR_FLAG: COLOR.BACK_PURPLE + FLAG + COLOR.END,
     }
 
 class Minesweeper(object):
+    
     
     def __init__(self, rows, cols, difficulty):
         """Creates a minesweeper board, ensuring that the first guess is a box
         with no surrounding mines.
         """
+        self.cursor_x = -1
+        self.cursor_y = -1
+
         self._generate_board(rows, cols, difficulty)
         self.difficulty = difficulty
         self.viewable_board = list(list(
@@ -101,23 +111,49 @@ class Minesweeper(object):
     def _print_board(self, data):
         """Helper method to print the visible board or the full answers"""
         
-        print " ",
+        print "  ", # len(log(board_size))
+        for x in range(self.rows):
+            tens_digit = int(x / 10)
+            if tens_digit != 0:
+                print tens_digit,
+            else:
+                print " ",
+        print ""
+        print "  ", # len(log(board_size))
         for x in range(self.rows):
             print x % 10,
         print ""
-        
+
         y = 0
         for row in data:
-            print y % 10,
+            print str(y).rjust(2),
+            x = 0
             for item in row:
+                if x is self.cursor_x and y is self.cursor_y:
+                    if item == FLAG:
+                        item = CURSOR_FLAG
+                    else:
+                        item = CURSOR
                 print '%s' %COLOR_DICT[item],
-            #print '\n',
-            print y % 10
+                x += 1
+            print y
             y += 1
             
-        print " ",
+        print "  ", # len(log(board_size))
         for x in range(self.rows):
-            print x % 10,
+            tens_digit = int(x / 10)
+            if tens_digit != 0:
+                print tens_digit,
+            else:
+                print x % 10,
+        print ""
+        print "  ", # len(log(board_size))
+        for x in range(self.rows):
+            tens_digit = int(x / 10)
+            if tens_digit == 0:
+                print " ",
+            else:
+                print x % 10,
         print ""
         
     def print_board(self):
