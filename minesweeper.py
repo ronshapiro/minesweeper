@@ -3,6 +3,9 @@
 import math
 import random
 import re
+import sys
+import termios
+import tty
 
 class COLOR:
     END = '\033[0m'
@@ -15,35 +18,98 @@ class COLOR:
     CYAN = '\033[0;36m'
     WHITE = '\033[0;37m'
     BACK_RED = '\033[41m'
+    BACK_GREEN = '\033[42m'
     BACK_YELLOW = '\033[43m'
     BACK_BLUE = '\033[44m'
     BACK_PURPLE = '\033[45m'
+    BACK_CYAN = '\033[46m'
+
+GUESS = 'g'
 
 BLOCK = u"\u2588"
 FLAG = u"\u2690"
 INCORRECT_FLAG = 'i'
 
 CURSOR = u"\u2592"
-CURSOR_FLAG = 'CURSOR_FLAG'
+CURSOR_PRINTABLE = COLOR.PURPLE + CURSOR + COLOR.END
 
-COLOR_DICT = {
-    0: " ", #COLOR.WHITE + '0' + COLOR.END,
-    1: COLOR.BLUE + '1' + COLOR.END,
-    2: COLOR.GREEN + '2' + COLOR.END,
-    3: COLOR.RED + '3' + COLOR.END,
-    4: COLOR.PURPLE + '4' + COLOR.END,
-    5: COLOR.YELLOW + '5' + COLOR.END,
-    6: COLOR.CYAN + '6' + COLOR.END,
-    7: COLOR.CYAN + '7' + COLOR.END,
-    8: COLOR.CYAN + '8' + COLOR.END,
-    BLOCK: BLOCK,
-    FLAG: COLOR.BLACK + COLOR.BACK_YELLOW + FLAG + COLOR.END,
-    #FLAG: COLOR.YELLOW + FLAG + COLOR.END,
-    'x': COLOR.BLACK + COLOR.BACK_RED + 'x' + COLOR.END,
-    'i': COLOR.BLACK + COLOR.BACK_BLUE + FLAG + COLOR.END,
-    CURSOR: COLOR.PURPLE + CURSOR + COLOR.END,
-    CURSOR_FLAG: COLOR.BACK_PURPLE + FLAG + COLOR.END,
-    }
+class Printable:
+    def __init__(self, printable, color_without_cursor="", color_on_cursor=""):
+        self.printable = printable
+        self.color_without_cursor = color_without_cursor
+        self.color_on_cursor = color_on_cursor
+
+    def get_printable(self, is_cursor):
+        _str = ""
+        if is_cursor:
+            _str += COLOR.BLACK + self.color_on_cursor
+        else:
+            _str += self.color_without_cursor
+
+        if self.printable == BLOCK and is_cursor:
+            _str += CURSOR_PRINTABLE
+        elif self.printable == ' ' and is_cursor:
+            _str = CURSOR_PRINTABLE
+        else:
+            _str += self.printable
+            
+        _str += COLOR.END
+        return _str
+
+    
+PRINTABLES = {
+    0: Printable(' ', '', ''),
+    1: Printable('1', COLOR.BLUE, COLOR.BACK_BLUE),
+    2: Printable('2', COLOR.GREEN, COLOR.BACK_GREEN),
+    3: Printable('3', COLOR.RED, COLOR.BACK_RED),
+    4: Printable('4', COLOR.PURPLE, COLOR.BACK_PURPLE),
+    5: Printable('5', COLOR.YELLOW, COLOR.BACK_YELLOW),
+    6: Printable('6', COLOR.CYAN, COLOR.BACK_CYAN),
+    7: Printable('7', COLOR.CYAN, COLOR.BACK_CYAN),
+    8: Printable('8', COLOR.CYAN, COLOR.BACK_CYAN),
+    BLOCK: Printable(BLOCK, '', COLOR.BACK_PURPLE),
+    FLAG: Printable(FLAG,
+                    COLOR.BLACK + COLOR.BACK_YELLOW,
+                    COLOR.BLACK + COLOR.BACK_PURPLE),
+    'x': Printable('x', COLOR.BLACK + COLOR.BACK_RED, COLOR.BLACK + COLOR.BACK_RED),
+    'i': Printable(FLAG, COLOR.BLACK + COLOR.BACK_BLUE, COLOR.BLACK + COLOR.BACK_BLUE),
+}
+
+def _read_keystroke(count=1):
+    file_descriptor = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(file_descriptor)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        char = sys.stdin.read(count)
+    finally:
+        termios.tcsetattr(file_descriptor, termios.TCSADRAIN, old_settings)
+    return char
+
+class Keys:
+    UP = 'up'
+    DOWN = 'down'
+    LEFT = 'left'
+    RIGHT = 'right'
+    
+
+def get_keystroke():
+    _str = _read_keystroke()
+    if _str == '\x1b':
+        _str += _read_keystroke(2)
+        
+    if _str == '\x1b[A' or _str == 'k':
+        return Keys.UP
+    elif _str == '\x1b[B' or _str == 'j':
+        return Keys.DOWN
+    elif _str == '\x1b[C' or _str == 'l':
+        return Keys.RIGHT
+    elif _str == '\x1b[D' or _str == 'h':
+        return Keys.LEFT
+    elif _str == '\x03' or _str == '\x04':
+        sys.exit()
+    elif _str == '\r':
+        return GUESS
+    return _str
 
 class Minesweeper(object):
     
@@ -52,19 +118,15 @@ class Minesweeper(object):
         """Creates a minesweeper board, ensuring that the first guess is a box
         with no surrounding mines.
         """
-        self.cursor_x = -1
-        self.cursor_y = -1
+        self.cursor_x = rows/2
+        self.cursor_y = cols/2
+        self.rows = rows
+        self.cols = cols
 
         self._generate_board(rows, cols, difficulty)
         self.difficulty = difficulty
         self.viewable_board = list(list(
             BLOCK for x in range(self.cols)) for x in range(self.rows))
-
-    def _first_guess(self, r, c):
-        self._validate(r, c)
-        while self.values[r][c] is not 0 or self.values == 'x':
-            self._generate_board(self.rows, self.cols, self.difficulty)
-        self.guess(r,c)
 
     def _generate_board(self, rows, cols, difficulty):
         """Helper to generate the board and calculate the appropriate values
@@ -129,12 +191,8 @@ class Minesweeper(object):
             print str(y).rjust(2),
             x = 0
             for item in row:
-                if x is self.cursor_x and y is self.cursor_y:
-                    if item == FLAG:
-                        item = CURSOR_FLAG
-                    else:
-                        item = CURSOR
-                print '%s' %COLOR_DICT[item],
+                print '%s' %PRINTABLES[item].get_printable(
+                    x is self.cursor_x and y is self.cursor_y),
                 x += 1
             print y
             y += 1
@@ -182,17 +240,38 @@ class Minesweeper(object):
     def _validate(self, r, c):
         if r >= self.rows or r < 0 or c >= self.cols or c < 0:
             raise OutOfBoundsError
-        
+
+    def move_cursor(self, key):
+        if key == Keys.LEFT and self.cursor_x != 0:
+            self.cursor_x -= 1
+        elif key == Keys.RIGHT and self.cursor_x != self.cols - 1:
+            self.cursor_x += 1
+        elif key == Keys.UP and self.cursor_y != 0:
+            self.cursor_y -= 1
+        elif key == Keys.DOWN and self.cursor_y != self.rows - 1:
+            self.cursor_y += 1
+
     def guess(self, r, c):
         self._validate(r, c)
         if self.viewable_board[r][c] == FLAG:
             return
-        board = self.board
+        if type(self.viewable_board[r][c]) is int:
+            self.guess_surrounding(r,c)
+            return
+        
         value = self.values[r][c]
         self.viewable_board[r][c] = value
         
         if value is 0:
             self.guess_surrounding(r,c)
+            
+    def guess_on_cursor(self):
+        self.guess(self.cursor_y, self.cursor_x)
+
+    def first_guess(self):
+        while self.values[self.cursor_y][self.cursor_x] is not 0 or self.values == 'x':
+            self._generate_board(self.rows, self.cols, self.difficulty)
+        self.guess(self.cursor_y, self.cursor_x)
 
     def guess_surrounding(self, r, c):
         self._validate(r, c)
@@ -243,17 +322,17 @@ class Minesweeper(object):
             if self.values[r+1][c+1] is 0:
                 self.guess_surrounding(r+1, c+1)
 
-    def flag(self, r, c):
-        self._validate(r, c)
-        if self.viewable_board[r][c] == BLOCK:
-            self.viewable_board[r][c] = FLAG
+    def guess_surrounding_on_cursor(self):
+        self.guess_surrounding(self.cursor_y, self.cursor_x)
+
+    def toggle_flag(self):
+        col = self.cursor_x
+        row = self.cursor_y
+        if self.viewable_board[row][col] == BLOCK:
+            self.viewable_board[row][col] = FLAG
             self.flags_marked += 1
-        #self.print_board()
-        
-    def unflag(self, r, c):
-        self._validate(r, c)
-        if self.viewable_board[r][c] == FLAG:
-            self.viewable_board[r][c] = BLOCK
+        elif self.viewable_board[row][col] == FLAG:
+            self.viewable_board[row][col] = BLOCK
             self.flags_marked -= 1
 
     def won(self):
@@ -303,67 +382,24 @@ if __name__ == '__main__':
             'What percentage of the squares should be mines? '))
     
     m = Minesweeper(rows, rows, difficulty)
-    print ('Type in your guesses with the row number, then column number, '
-           'separated by a space.')
-    while True:
-        try:
-            m.print_board()
-            first_guess = raw_input('What is your first guess? ').split(' ')
-            if len(first_guess) is not 2:
-                raise ValueError
-            print ''
-            m._first_guess(int(first_guess[0]), int(first_guess[1]))
-            break
-        except ValueError:
-            print 'Invalid format. Try Again.'
-        except OutOfBoundsError:
-            print 'That box is not on the board!'
-            
-    print ("Continue playing, entering you're guesses in the same format. "
-           "Additionally, you may prefix any move with 'f' to flag a box, 'u' "
-           "to unflag, or 's' to guess all unflagged boxes surrounding the box "
-           'you selected.\n\n'
-           'E.x.\n'
-           'f 1 2\n'
-           'u 1 2\n'
-           's 1 2')
+    m.print_board()
 
+    has_guessed = False
     while not m.won() and not m.lost():
+        key = get_keystroke()
+        m.move_cursor(key)
+        if (key == 'f' or key == 'x') and has_guessed:
+            m.toggle_flag()
+        elif key == GUESS:
+            if has_guessed:
+                m.guess_on_cursor()
+            else:
+                m.first_guess()
+                has_guessed = True
+        elif key == 's' and has_guessed:
+            m.guess_surrounding_on_cursor()
         m.print_board()
         print ''
-        try:
-            usr_input = raw_input('Next move (%s mines left): ' %m.mines_left())
-            guesses = usr_input.split(';')
-            for guess in guesses:
-                guess = re.sub(r' +', ' ', guess).strip(' ').split(' ')
-                if len(guess) is 2:
-                    m.guess(int(guess[-2]), int(guess[-1]))
-                elif len(guess) is 3:
-                    func = None
-                    if guess[0] == 'g':
-                        func = m.guess
-                    elif guess[0] == 'f':
-                        func = m.flag
-                    elif guess[0] == 'u':
-                        func = m.unflag
-                    elif guess[0] == 's':
-                        func = m.guess_surrounding
-                    else:
-                        raise ValueError
-                    xs = guess[-2].lstrip('(').rstrip(')').split(',')
-                    ys = guess[-1].lstrip('(').rstrip(')').split(',')
-
-                    apply_ranges(xs)
-                    apply_ranges(ys)
-                    for x in xs:
-                        for y in ys:
-                            func(int(x),int(y))
-                else:
-                    raise ValueError
-        except ValueError:
-            print 'Invalid format. Try Again.'
-        except OutOfBoundsError:
-            print 'That box is not on the board!'
 
     print ''
     if m.won():
@@ -371,7 +407,6 @@ if __name__ == '__main__':
         print 'You won!'
     elif m.lost():
         m.corrected_board()
-        #m._answers()
         print 'You lost!'
     else:
         print 'HUH?'
