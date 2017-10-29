@@ -52,11 +52,11 @@ class Printable:
             _str = CURSOR_PRINTABLE
         else:
             _str += self.printable
-            
+
         _str += COLOR.END
         return _str
 
-    
+
 PRINTABLES = {
     0: Printable(' ', '', ''),
     1: Printable('1', COLOR.BLUE, COLOR.BACK_BLUE),
@@ -90,13 +90,13 @@ class Keys:
     DOWN = 'down'
     LEFT = 'left'
     RIGHT = 'right'
-    
+
 
 def get_keystroke():
     _str = _read_keystroke()
     if _str == '\x1b':
         _str += _read_keystroke(2)
-        
+
     if _str == '\x1b[A' or _str == 'k':
         return Keys.UP
     elif _str == '\x1b[B' or _str == 'j':
@@ -112,8 +112,8 @@ def get_keystroke():
     return _str
 
 class Minesweeper(object):
-    
-    
+
+
     def __init__(self, rows, cols, difficulty):
         """Creates a minesweeper board, ensuring that the first guess is a box
         with no surrounding mines.
@@ -141,15 +141,15 @@ class Minesweeper(object):
 
         self.flags_marked = 0
         self.num_mines = int(rows*cols*difficulty)
-        if self.num_mines >= rows*cols/2:            
+        if self.num_mines >= rows*cols/2:
             self.num_mines = rows*cols/2
-            
+
         for x in range(self.num_mines):
             box = self._random_box()
             while board[box[0]][box[1]]:
                 box = self._random_box()
             board[box[0]][box[1]] = True
-            
+
         for r in range(rows):
             for c in range(cols):
                 if board[r][c]:
@@ -172,7 +172,7 @@ class Minesweeper(object):
 
     def _print_board(self, data):
         """Helper method to print the visible board or the full answers"""
-        
+
         print "  ", # len(log(board_size))
         for x in range(self.rows):
             tens_digit = int(x / 10)
@@ -196,7 +196,7 @@ class Minesweeper(object):
                 x += 1
             print y
             y += 1
-            
+
         print "  ", # len(log(board_size))
         for x in range(self.rows):
             tens_digit = int(x / 10)
@@ -213,7 +213,7 @@ class Minesweeper(object):
             else:
                 print x % 10,
         print ""
-        
+
     def print_board(self):
         """Print what has been guessed by the user"""
         self._print_board(self.viewable_board)
@@ -258,13 +258,13 @@ class Minesweeper(object):
         if type(self.viewable_board[r][c]) is int:
             self.guess_surrounding(r,c)
             return
-        
+
         value = self.values[r][c]
         self.viewable_board[r][c] = value
-        
+
         if value is 0:
             self.guess_surrounding(r,c)
-            
+
     def guess_on_cursor(self):
         self.guess(self.cursor_y, self.cursor_x)
 
@@ -291,32 +291,32 @@ class Minesweeper(object):
             self.viewable_board[r-1][c] = self.values[r-1][c]
             if self.values[r-1][c] is 0:
                 self.guess_surrounding(r-1, c)
-        if (r > 0 and c < cols-1 and 
+        if (r > 0 and c < cols-1 and
             self.viewable_board[r-1][c+1] == BLOCK):
             self.viewable_board[r-1][c+1] = self.values[r-1][c+1]
             if self.values[r-1][c+1] is 0:
                 self.guess_surrounding(r-1, c+1)
-        if (c > 0 and 
+        if (c > 0 and
             self.viewable_board[r][c-1] == BLOCK):
             self.viewable_board[r][c-1] = self.values[r][c-1]
             if self.values[r][c-1] is 0:
                 self.guess_surrounding(r, c-1)
-        if (c < cols-1 and 
+        if (c < cols-1 and
             self.viewable_board[r][c+1] == BLOCK):
             self.viewable_board[r][c+1] = self.values[r][c+1]
             if self.values[r][c+1] is 0:
                 self.guess_surrounding(r, c+1)
-        if (r < rows-1 and c > 0 and 
+        if (r < rows-1 and c > 0 and
             self.viewable_board[r+1][c-1] == BLOCK):
             self.viewable_board[r+1][c-1] = self.values[r+1][c-1]
             if self.values[r+1][c-1] is 0:
                 self.guess_surrounding(r+1, c-1)
-        if (r < rows-1 and 
+        if (r < rows-1 and
             self.viewable_board[r+1][c] == BLOCK):
             self.viewable_board[r+1][c] = self.values[r+1][c]
             if self.values[r+1][c] is 0:
                 self.guess_surrounding(r+1, c)
-        if (r < rows-1 and c < cols-1 and 
+        if (r < rows-1 and c < cols-1 and
             self.viewable_board[r+1][c+1] == BLOCK):
             self.viewable_board[r+1][c+1] = self.values[r+1][c+1]
             if self.values[r+1][c+1] is 0:
@@ -348,7 +348,7 @@ class Minesweeper(object):
 
     def mines_left(self):
         return self.num_mines - self.flags_marked
-                
+
     def lost(self):
         for row in self.viewable_board:
             for item in row:
@@ -375,12 +375,12 @@ def apply_ranges(list):
             for num in r:
                 more.append(str(num))
     list.extend(more)
-    
+
 if __name__ == '__main__':
     rows = int(raw_input( "How big of a board would you like to play with? "))
     difficulty = float(raw_input(
             'What percentage of the squares should be mines? '))
-    
+
     m = Minesweeper(rows, rows, difficulty)
     m.print_board()
 
@@ -410,4 +410,3 @@ if __name__ == '__main__':
         print 'You lost!'
     else:
         print 'HUH?'
-        
