@@ -173,22 +173,27 @@ class Minesweeper(object):
     def _print_board(self, data):
         """Helper method to print the visible board or the full answers"""
 
-        print "  ", # len(log(board_size))
-        for x in range(self.rows):
-            tens_digit = int(x / 10)
-            if tens_digit != 0:
-                print tens_digit,
-            else:
-                print " ",
-        print ""
-        print "  ", # len(log(board_size))
+        magnitude = int(math.ceil(math.log10(self.rows)))
+
+        # magnitude for the space-padding to start the line + (since each digit + space) - 1 to
+        # adjust for the open parens
+        header_footer = ' ' * (magnitude + (10 * 2) - 1)
+        tens_int = 10
+        while tens_int < self.rows:
+          tens_str = '({})'.format(tens_int)
+          header_footer += tens_str
+          header_footer += ((20 - len(tens_str)) * ' ')
+          tens_int += 10
+        print header_footer
+
+        print " " * magnitude,
         for x in range(self.rows):
             print x % 10,
         print ""
 
         y = 0
         for row in data:
-            print str(y).rjust(2),
+            print str(y).rjust(magnitude),
             x = 0
             for item in row:
                 print '%s' %PRINTABLES[item].get_printable(
@@ -197,21 +202,11 @@ class Minesweeper(object):
             print y
             y += 1
 
-        print "  ", # len(log(board_size))
+        print " " * magnitude,
         for x in range(self.rows):
-            tens_digit = int(x / 10)
-            if tens_digit != 0:
-                print tens_digit,
-            else:
-                print x % 10,
+            print x % 10,
         print ""
-        print "  ", # len(log(board_size))
-        for x in range(self.rows):
-            tens_digit = int(x / 10)
-            if tens_digit == 0:
-                print " ",
-            else:
-                print x % 10,
+        print header_footer
         print ""
 
     def print_board(self):
