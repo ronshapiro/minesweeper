@@ -101,23 +101,38 @@ class Minesweeper(object):
     def _print_board(self, data):
         """Helper method to print the visible board or the full answers"""
 
-        print " ",
+        magnitude = int(math.ceil(math.log10(self.rows)))
+
+        # magnitude for the space-padding to start the line + (since each digit + space) - 1 to
+        # adjust for the open parens
+        header_footer = ' ' * (magnitude + (10 * 2) - 1)
+        tens_int = 10
+        while tens_int < self.rows:
+          tens_str = '({})'.format(tens_int)
+          header_footer += tens_str
+          header_footer += ((20 - len(tens_str)) * ' ')
+          tens_int += 10
+        print header_footer
+
+        print " " * magnitude,
         for x in range(self.rows):
             print x % 10,
         print ""
 
         y = 0
         for row in data:
-            print y % 10,
+            print str(y).rjust(magnitude),
             for item in row:
                 print '%s' %COLOR_DICT[item],
-            #print '\n',
-            print y % 10
+            print str(y).ljust(magnitude)
             y += 1
 
-        print " ",
+        print " " * magnitude,
         for x in range(self.rows):
             print x % 10,
+
+        print ""
+        print header_footer
         print ""
 
     def print_board(self):
